@@ -80,7 +80,7 @@ export const DOCUMENT_TYPES = [
       { id: 'empresa',            label: 'Empresa / empleador que paga el salario', type: 'text', required: true,  placeholder: 'Empresa XYZ S.A. de C.V.' },
       { id: 'empleado',           label: 'Nombre completo (según DUI)',              type: 'text', required: true,  placeholder: 'Luis Alberto Hernández García' },
       { id: 'dui',                label: 'Número de DUI',                           type: 'text', required: true,  placeholder: '00000000-0' },
-      { id: 'fecha_ultimo_dia',   label: 'Fecha en que NO se presentará a trabajar',type: 'date', required: true  },
+      { id: 'fecha_ultimo_dia',   label: 'Fecha ultimo dia de labores',type: 'date', required: true  },
       { id: 'fecha_ingreso',      label: 'Fecha de ingreso (según contrato)',        type: 'date', required: true  },
       { id: 'fecha_presentacion', label: 'Fecha de presentación del documento',     type: 'date', required: true  },
     ],

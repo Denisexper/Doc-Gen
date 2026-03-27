@@ -248,8 +248,8 @@ function SolicitudVacaciones({ d }) {
 
       {/* Cuerpo */}
       <p className="mb-4 text-justify">
-        Reciba un cordial saludo. Por medio de la presente, solicito de la manera más atenta su
-        autorización para tomar un período vacacional del{" "}
+        Reciba un cordial saludo. Por medio de la presente, solicito de la
+        manera más atenta su autorización para tomar un período vacacional del{" "}
         <strong>{fmtDate(d.fecha_inicio)}</strong> al{" "}
         <strong>{fmtDate(d.fecha_fin)}</strong>, para retomar mis labores el{" "}
         <strong>{fmtDate(d.fecha_regreso)}</strong>.
@@ -284,111 +284,87 @@ function SolicitudVacaciones({ d }) {
 
 // ─────────────────────────────────────────────────────────────────────
 // 4. PREAVISO LABORAL — formato oficial gobierno El Salvador (imagen 4)
-//    Sin las instrucciones en paréntesis (solo datos reales)
 // ─────────────────────────────────────────────────────────────────────
 function PreavisoLaboral({ d }) {
-  const cell = "border border-gray-500 p-3";
+  // Ajustamos el padding y eliminamos alturas fijas para evitar la hoja en blanco
   return (
-    <div id="document-preview" className={`${paper} p-4`}>
-      <div className="border-2 border-gray-500 text-[13px]">
-        {/* Título */}
-        <div className={`${cell} text-center border-b-2`}>
-          <h1 className="text-lg font-bold uppercase tracking-widest">
-            PREAVISO LABORAL
-          </h1>
-        </div>
+    <div
+      id="document-preview"
+      className={`${paper} p-10 text-gray-800 leading-normal text-sm`}
+    >
+      {/* Título - Reducido para que no ocupe tanto espacio */}
+      <div className="text-center mb-6">
+        <h1 className="text-xl font-bold uppercase tracking-widest border-b-2 border-gray-800 pb-1 inline-block">
+          Preaviso Laboral
+        </h1>
+      </div>
 
-        {/* Fila vacía */}
-        <div className={`${cell} h-8`} />
+      {/* Empresa */}
+      <div className="mb-6 text-center">
+        <p className="text-lg font-bold uppercase">
+          {blank(d.empresa, "[Nombre de la Empresa]")}
+        </p>
+        <p className="font-bold mt-1 italic">Presente.</p>
+      </div>
 
-        {/* Empresa */}
-        <div className={`${cell} text-center`}>
-          <p className="font-semibold min-h-[20px]">{blank(d.empresa, "")}</p>
-        </div>
+      {/* Cuerpo del Texto */}
+      <div className="space-y-4 text-justify">
+        <p>
+          Por este medio, interpongo mi preaviso de la{" "}
+          <strong>Renuncia Voluntaria</strong> para dar cumplimiento al{" "}
+          <span className="font-semibold">
+            Art. 2 de la Ley Reguladora de Prestación Económica por Renuncia
+            Voluntaria
+          </span>
+          , según Decreto <strong>Legislativo 592</strong>, la cual surtirá
+          efecto a partir del día:
+        </p>
 
-        {/* Presente */}
-        <div className={cell}>
-          <p className="font-bold">Presente.</p>
-        </div>
-
-        {/* Texto legal */}
-        <div className={cell}>
-          <p className="text-justify">
-            Por este medio interpongo mi preaviso de la Renuncia Voluntaria para
-            dar cumplimiento al{" "}
-            <strong>
-              Art.2 de la ley Reguladora de Prestación Económica por Renuncia
-              Voluntaria
-            </strong>
-            , según Decreto <strong>Legislativo 592</strong>, la cual surtirá
-            efecto a partir del día:
+        {/* Fecha de Salida */}
+        <div className="py-2 text-center">
+          <div className="inline-block border-b border-gray-800 pb-1 px-4">
+            <span className="text-base font-bold italic">
+              {fmtDate(d.fecha_ultimo_dia)}
+            </span>
+          </div>
+          <p className="text-[10px] uppercase text-gray-400 mt-1 font-bold">
+            (Último día de labores)
           </p>
         </div>
 
-        {/* Fecha último día */}
-        <div className={cell}>
-          <div className="border-b border-gray-600 w-64 mx-auto text-center pb-0.5 min-h-[22px]">
-            {fmtDate(d.fecha_ultimo_dia)}
-          </div>
-        </div>
+        <p>
+          Agradezco la oportunidad que se me otorgó por prestar mis servicios a
+          dicha empresa desde el día <strong>{fmtDate(d.fecha_ingreso)}</strong>
+          , fecha en la cual inicié mis funciones según contrato laboral.
+        </p>
+      </div>
 
-        {/* Agradecimiento */}
-        <div className={cell}>
-          <p className="font-bold">
-            Agradezco la oportunidad que se me otorgó por prestar mis servicios
-            a dicha empresa desde:
+      {/* Lugar y Fecha */}
+      <div className="mt-6 mb-8 italic">
+        San Salvador, {fmtDate(d.fecha_presentacion)}
+      </div>
+
+      {/* Sección de Firmas - Usamos flex para mejor control de espacio */}
+      <div className="space-y-8">
+        {/* Firma Trabajador */}
+        <div className="w-64">
+          <div className="border-b border-gray-800 mb-1 w-full h-8"></div>
+          <p className="font-bold uppercase text-xs">{blank(d.empleado, "")}</p>
+          <p className="text-[10px] text-gray-600">DUI: {blank(d.dui, "")}</p>
+          <p className="text-[9px] font-bold text-blue-900 uppercase mt-0.5">
+            Firma del Trabajador
           </p>
         </div>
 
-        {/* Fecha ingreso */}
-        <div className={cell}>
-          <div className="border-b border-gray-600 w-56 pb-0.5 min-h-[22px]">
-            {fmtDate(d.fecha_ingreso)}
-          </div>
-        </div>
-
-        {/* Ciudad y fecha presentación */}
-        <div className={`${cell} flex items-end gap-2`}>
-          <span className="shrink-0 font-semibold">San Salvador,</span>
-          <div className="flex-1 border-b border-gray-600 pb-0.5 min-h-[22px]">
-            {fmtDate(d.fecha_presentacion)}
-          </div>
-        </div>
-
-        {/* Nombre del trabajador */}
-        <div className={cell}>
-          <div className="border-b border-gray-600 w-72 mx-auto text-center pb-0.5 min-h-[22px] font-semibold">
-            {blank(d.empleado, "")}
-          </div>
-        </div>
-
-        {/* DUI */}
-        <div className={cell}>
-          <div className="border-b border-gray-600 w-52 mx-auto text-center pb-0.5 min-h-[22px]">
-            {blank(d.dui, "")}
-          </div>
-        </div>
-
-        {/* Firma del trabajador */}
-        <div className={cell}>
-          <p className="font-bold mb-8">F.</p>
-          <div className="border-b border-gray-600 w-48" />
-        </div>
-
-        {/* Título firma empleador */}
-        <div className={`${cell} border-t-2`}>
-          <p className="font-bold text-xs">
-            FIRMA DE RECIBIDO DEL EMPLEADOR DIA Y HORA
+        {/* Firma Recibido Empleador */}
+        <div className="pt-4 border-t border-dashed border-gray-200">
+          <p className="font-bold text-[10px] text-gray-500 mb-2 uppercase">
+            Recibido por el Empleador (Día y Hora) — Art. 4 Decreto 592
           </p>
-          <p className="font-bold text-xs">
-            DE LA PRESENTACION. ART.4 DECRETO LEG. 592
+          <div className="border-b border-gray-800 w-64 h-8"></div>
+          <p className="text-[9px] font-bold text-gray-400 mt-0.5 uppercase">
+            Sello y Firma de Recepción
           </p>
-        </div>
-
-        {/* Firma empleador */}
-        <div className={cell}>
-          <p className="font-bold mb-8">F.</p>
-          <div className="border-b border-gray-600 w-48" />
         </div>
       </div>
     </div>
