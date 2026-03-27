@@ -1,44 +1,28 @@
-/**
- * exportWord.js
- * Genera un archivo .docx editable a partir de los datos del formulario.
- * Usa la librería 'docx' (https://docx.js.org/) que funciona 100% en el browser.
- *
- * ESTRUCTURA:
- *   buildDocxDocument(tipo, datos) → Blob (.docx)
- *   exportToWord(tipo, datos, filename)
- *
- * Cada tipo de documento tiene su propia función constructora al final del archivo.
- */
-
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-  AlignmentType, HeadingLevel, BorderStyle, WidthType, ShadingType,
-  Header, Footer, PageNumber, NumberFormat, convertInchesToTwip,
+  AlignmentType, BorderStyle, WidthType, convertInchesToTwip,
 } from 'docx'
 import { saveAs } from 'file-saver'
 
-// ── Colores y estilos reutilizables ──────────────────────────────────
 const COLOR = {
-  primary:   '1E42C8',
-  dark:      '1B2A69',
-  gray:      '6B7280',
-  lightGray: 'F3F4F6',
-  black:     '111827',
-  white:     'FFFFFF',
+  primary: '1E42C8',
+  dark:    '1B2A69',
+  gray:    '6B7280',
+  black:   '111827',
 }
-
 const FONT = 'Calibri'
 
-// ── Helpers de construcción ──────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────
 
 function run(text, opts = {}) {
   return new TextRun({
     text: String(text ?? ''),
     font: FONT,
-    size: opts.size ?? 22,             // 22 half-points = 11pt
+    size: opts.size ?? 22,
     bold: opts.bold ?? false,
     color: opts.color ?? COLOR.black,
     italics: opts.italics ?? false,
+    underline: opts.underline ? {} : undefined,
     ...opts,
   })
 }
@@ -48,206 +32,394 @@ function para(children, opts = {}) {
     children: Array.isArray(children) ? children : [children],
     alignment: opts.align ?? AlignmentType.LEFT,
     spacing: { after: opts.spaceAfter ?? 160, before: opts.spaceBefore ?? 0 },
+    border: opts.borderBottom
+      ? { bottom: { color: COLOR.primary, style: BorderStyle.SINGLE, size: 4, space: 4 } }
+      : undefined,
     ...opts,
   })
 }
 
-function emptyLine() {
-  return para([run('')], { spaceAfter: 80 })
-}
+function empty(space = 80) { return para([run('')], { spaceAfter: space }) }
 
-function heading(text, level = 1) {
-  const sizes = { 1: 32, 2: 26, 3: 24 }
-  return para([
-    run(text, { size: sizes[level] ?? 24, bold: true, color: COLOR.dark }),
-  ], { align: AlignmentType.CENTER, spaceAfter: 200 })
-}
-
-function sectionTitle(text) {
-  return para([
-    run(text, { size: 22, bold: true, color: COLOR.primary }),
-  ], { spaceAfter: 80, spaceBefore: 200 })
-}
-
-function labelValue(label, value) {
-  return para([
-    run(`${label}: `, { bold: true, size: 22 }),
-    run(value ?? '', { size: 22 }),
-  ], { spaceAfter: 80 })
-}
-
-function dividerLine() {
+function divider() {
   return new Paragraph({
     border: { bottom: { color: COLOR.primary, style: BorderStyle.SINGLE, size: 4, space: 4 } },
     spacing: { after: 200 },
   })
 }
 
-function signatureBlock(name, cargo = '') {
+function sig(name, cargo = '') {
   return [
-    emptyLine(),
-    emptyLine(),
-    para([run('___________________________', { size: 22, color: COLOR.gray })], { align: AlignmentType.LEFT }),
-    para([run(name, { size: 22, bold: true })], { spaceAfter: 40 }),
-    cargo ? para([run(cargo, { size: 20, color: COLOR.gray })], { spaceAfter: 40 }) : emptyLine(),
+    empty(300),
+    para([run('___________________________', { color: COLOR.gray })]),
+    para([run(name, { bold: true })], { spaceAfter: 40 }),
+    cargo ? para([run(cargo, { size: 20, color: COLOR.gray })], { spaceAfter: 40 }) : empty(40),
   ]
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr + 'T12:00:00')
+function fmtDate(s) {
+  if (!s) return '_______________'
+  const d = new Date(s + 'T12:00:00')
   return d.toLocaleDateString('es-SV', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-// ── Función pública principal ────────────────────────────────────────
+function calcDias(ini, fin) {
+  if (!ini || !fin) return '___'
+  return String(Math.max(1, Math.ceil((new Date(fin) - new Date(ini)) / 86400000) + 1))
+}
 
+const margins = {
+  top: convertInchesToTwip(1),
+  bottom: convertInchesToTwip(1),
+  left: convertInchesToTwip(1.25),
+  right: convertInchesToTwip(1.25),
+}
+
+// ── Función pública ───────────────────────────────────────────────────
 export async function exportToWord(tipo, datos, filename = 'documento') {
   const builder = BUILDERS[tipo]
-  if (!builder) {
-    throw new Error(`No hay builder de Word para el tipo: ${tipo}`)
-  }
-
+  if (!builder) throw new Error(`Sin builder Word para: ${tipo}`)
   const doc = builder(datos)
   const blob = await Packer.toBlob(doc)
   saveAs(blob, `${filename}.docx`)
 }
 
-// ── Builders por tipo de documento ──────────────────────────────────
-
+// ── Builders ─────────────────────────────────────────────────────────
 const BUILDERS = {
 
+  // 1. CONSTANCIA DE TRABAJO
   'constancia-trabajo': (d) => new Document({
     sections: [{
-      properties: { page: { margin: { top: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1.25), right: convertInchesToTwip(1.25) } } },
+      properties: { page: { margin: margins } },
       children: [
-        heading('CONSTANCIA DE TRABAJO'),
-        dividerLine(),
-        emptyLine(),
+        // Header: empresa | fecha
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideH: { style: BorderStyle.NONE }, insideV: { style: BorderStyle.NONE } },
+          rows: [new TableRow({ children: [
+            new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } }, children: [
+              para([run(d.empresa || '', { bold: true, size: 22 })], { spaceAfter: 40 }),
+              d.direccion_empresa ? para([run(d.direccion_empresa, { size: 18, color: COLOR.gray })], { spaceAfter: 0 }) : empty(0),
+            ]}),
+            new TableCell({ width: { size: 40, type: WidthType.PERCENTAGE }, borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } }, children: [
+              para([run(`${d.ciudad || 'San Salvador'}, ${fmtDate(d.fecha_emision)}`, { size: 20 })], { align: AlignmentType.RIGHT }),
+            ]}),
+          ]})],
+        }),
+        divider(),
+        empty(120),
+        para([run('A Quien pueda Interesar:', { bold: true, underline: true })], { align: AlignmentType.CENTER, spaceAfter: 280 }),
         para([
-          run('El/La suscrito/a ', { size: 22 }),
-          run(d.representante, { size: 22, bold: true }),
-          run(`, en calidad de `, { size: 22 }),
-          run(d.cargo_rep, { size: 22, bold: true }),
-          run(` de la empresa `, { size: 22 }),
-          run(d.empresa, { size: 22, bold: true }),
-          run(', hace constar que:', { size: 22 }),
-        ], { spaceAfter: 200 }),
-        para([
-          run(d.empleado, { size: 24, bold: true }),
-          d.dui_empleado ? run(` (DUI: ${d.dui_empleado})`, { size: 22, color: COLOR.gray }) : run(''),
-        ], { align: AlignmentType.CENTER, spaceAfter: 100 }),
-        para([
-          run('Se desempeña como ', { size: 22 }),
-          run(d.cargo_empleado, { size: 22, bold: true }),
-          run(' en nuestra institución desde el ', { size: 22 }),
-          run(formatDate(d.fecha_ingreso), { size: 22, bold: true }),
-          run('.', { size: 22 }),
-        ], { spaceAfter: 160 }),
-        d.salario ? para([
-          run('Devengando un salario mensual de ', { size: 22 }),
-          run(`USD ${parseFloat(d.salario).toFixed(2)}`, { size: 22, bold: true }),
-          run('.', { size: 22 }),
-        ], { spaceAfter: 160 }) : emptyLine(),
-        para([run('La presente constancia se extiende a petición del interesado/a para los fines que estime conveniente, en la ciudad de ', { size: 22 }),
-          run(d.ciudad, { bold: true, size: 22 }), run(', el día ', { size: 22 }),
-          run(formatDate(d.fecha_emision), { bold: true, size: 22 }), run('.', { size: 22 }),
-        ], { spaceAfter: 400 }),
-        ...signatureBlock(d.representante, d.cargo_rep),
+          run('Por medio de la presente hacemos constar que la Ciudadana/o '),
+          run(d.empleado || '_______________', { bold: true }),
+          d.dui_empleado ? run(`, titular de la C.I. ${d.dui_empleado},`) : run(','),
+          run(' labora en esta empresa desde el día '),
+          run(fmtDate(d.fecha_ingreso), { bold: true }),
+          run(' a la fecha, desempeñando un cargo de '),
+          run(d.cargo_empleado || '_______________', { bold: true }),
+          d.salario ? run(`, devengando un sueldo de USD ${parseFloat(d.salario).toFixed(2)}`) : run(''),
+          run('.'),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 220 }),
+        para([run('Agradeciendo de antemano las atenciones que se sirva dar al presente, quedo como su más seguro servidor.')], { align: AlignmentType.JUSTIFIED, spaceAfter: 400 }),
+        para([run('Atentamente')], { align: AlignmentType.CENTER, spaceAfter: 300 }),
+        ...sig(d.representante || '', d.cargo_rep || ''),
+        empty(200),
+        (d.direccion_empresa || d.telefono_empresa)
+          ? para([run([d.direccion_empresa, d.telefono_empresa ? `Telf. ${d.telefono_empresa}` : ''].filter(Boolean).join(' — '), { size: 18, color: COLOR.gray })], { align: AlignmentType.CENTER })
+          : empty(0),
       ],
     }],
   }),
 
-  'carta-renuncia': (d) => new Document({
+  // 2. PERMISO LABORAL
+  'permiso-laboral': (d) => new Document({
     sections: [{
-      properties: { page: { margin: { top: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1.25), right: convertInchesToTwip(1.25) } } },
+      properties: { page: { margin: margins } },
       children: [
-        para([run(formatDate(d.fecha_emision), { size: 22, color: COLOR.gray })], { align: AlignmentType.RIGHT, spaceAfter: 300 }),
-        para([run(d.jefe, { size: 22, bold: true })], { spaceAfter: 40 }),
-        para([run(d.cargo_jefe, { size: 22, color: COLOR.gray })], { spaceAfter: 40 }),
-        para([run(d.empresa, { size: 22 })], { spaceAfter: 300 }),
-        para([run('Estimado/a señor/a:', { size: 22 })], { spaceAfter: 200 }),
+        para([run('Carta de permiso laboral', { bold: true, size: 26, color: COLOR.dark })], {
+          border: { left: { color: COLOR.primary, style: BorderStyle.SINGLE, size: 16, space: 8 } },
+          spaceAfter: 280,
+        }),
+        para([run(d.empresa || '', { bold: true })], { spaceAfter: 40 }),
+        d.direccion_empresa ? para([run(d.direccion_empresa, { size: 20, color: COLOR.gray })], { spaceAfter: 40 }) : empty(0),
+        d.telefono_empresa  ? para([run(d.telefono_empresa,  { size: 20, color: COLOR.gray })], { spaceAfter: 40 }) : empty(0),
+        empty(80),
+        para([run(fmtDate(d.fecha_emision), { size: 20 })], { spaceAfter: 200 }),
+        para([run(d.empleado || '', { bold: true })], { spaceAfter: 40 }),
+        d.cargo_empleado ? para([run(d.cargo_empleado, { size: 20, color: COLOR.gray })], { spaceAfter: 40 }) : empty(0),
+        d.departamento   ? para([run(d.departamento,   { size: 20, color: COLOR.gray })], { spaceAfter: 40 }) : empty(0),
+        empty(80),
+        para([run('Estimado/a '), run(d.jefe || '_______________', { bold: true }), run(':')], { spaceAfter: 200 }),
         para([
-          run('Por medio de la presente, yo, ', { size: 22 }),
-          run(d.empleado, { size: 22, bold: true }),
-          run(`, que me desempeño como `, { size: 22 }),
-          run(d.cargo, { size: 22, bold: true }),
-          run(`, me permito comunicarle mi decisión de renunciar voluntariamente a mi puesto de trabajo, con un aviso previo de `, { size: 22 }),
-          run(`${d.aviso_dias} días`, { size: 22, bold: true }),
-          run(`, siendo mi último día de labores el `, { size: 22 }),
-          run(formatDate(d.ultimo_dia), { size: 22, bold: true }),
-          run('.', { size: 22 }),
-        ], { spaceAfter: 200 }),
-        d.motivo ? para([run(d.motivo, { size: 22 })], { spaceAfter: 200 }) : emptyLine(),
-        d.agradecimiento ? para([run(d.agradecimiento, { size: 22 })], { spaceAfter: 200 }) : emptyLine(),
-        para([run('Sin otro particular, me despido de usted.', { size: 22 })], { spaceAfter: 400 }),
-        para([run('Atentamente,', { size: 22 })], { spaceAfter: 300 }),
-        ...signatureBlock(d.empleado, d.cargo),
+          run('Me dirijo a usted para solicitar formalmente un permiso laboral debido a '),
+          run(d.motivo || '[motivo]', { bold: true }),
+          run('. A continuación, detallo la información relevante para esta solicitud:'),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 120 }),
+        para([run('Fecha de inicio del permiso: ', { bold: true }), run(fmtDate(d.fecha_inicio))], { spaceAfter: 80, numbering: undefined }),
+        para([run('Fecha de finalización del permiso: ', { bold: true }), run(fmtDate(d.fecha_fin))], { spaceAfter: 80 }),
+        para([run('Duración total del permiso: ', { bold: true }), run(`${calcDias(d.fecha_inicio, d.fecha_fin)} día(s)`)], { spaceAfter: 160 }),
+        d.motivo_detalle ? para([run('El motivo de esta solicitud es '), run(d.motivo_detalle), run('.')], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }) : empty(0),
+        para([run('Agradezco su comprensión y consideración en este asunto. Estoy dispuesto/a a proporcionar cualquier documentación adicional que pueda ser necesaria.')], { align: AlignmentType.JUSTIFIED, spaceAfter: 360 }),
+        para([run('Atentamente,')], { spaceAfter: 360 }),
+        ...sig(d.empleado || '', d.cargo_empleado || ''),
       ],
     }],
   }),
 
+  // 3. SOLICITUD DE VACACIONES
+  'solicitud-vacaciones': (d) => new Document({
+    sections: [{
+      properties: { page: { margin: margins } },
+      children: [
+        para([run(`${d.ciudad || 'San Salvador'}, ${fmtDate(d.fecha_emision)}`, { size: 20 })], { align: AlignmentType.RIGHT, spaceAfter: 280 }),
+        para([run(d.empresa || '', { bold: true })], { spaceAfter: 40 }),
+        d.datos_empresa    ? para([run(d.datos_empresa,    { size: 20, color: COLOR.gray })], { spaceAfter: 40 }) : empty(0),
+        d.area_departamento? para([run(d.area_departamento,{ size: 20 })], { spaceAfter: 40 }) : empty(0),
+        empty(80),
+        para([
+          run('Estimado(a), Apreciado(a) Sr., Sra., Lic., Dr. '),
+          run(d.destinatario || '_______________', { bold: true }),
+          run(' / A quien corresponda:'),
+        ], { spaceAfter: 200 }),
+        para([
+          run('Por medio de la presente, solicito de la manera más atenta su autorización para tomar un período vacacional del '),
+          run(fmtDate(d.fecha_inicio), { bold: true }),
+          run(' al '),
+          run(fmtDate(d.fecha_fin), { bold: true }),
+          run(', para retomar mis labores el '),
+          run(fmtDate(d.fecha_regreso), { bold: true }),
+          run('.'),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }),
+        d.motivo ? para([run('El motivo de esta solicitud es '), run(d.motivo), run('.')], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }) : empty(0),
+        para([run('Sin más por el momento, quedo en espera de su respuesta.')], { spaceAfter: 360 }),
+        para([run('Atentamente,')], { spaceAfter: 360 }),
+        ...sig(d.empleado || '', [d.area_empleado, d.cargo_empleado].filter(Boolean).join(' — ')),
+      ],
+    }],
+  }),
+
+  // 4. PREAVISO LABORAL — tabla con bordes para simular el formulario oficial
+  'carta-renuncia': (d) => {
+    const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'auto' }
+    const BORDER = { style: BorderStyle.SINGLE, size: 4, color: '555555' }
+    const THICK  = { style: BorderStyle.SINGLE, size: 8, color: '333333' }
+
+    const row = (children) => new TableRow({
+      children: [new TableCell({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: { top: BORDER, bottom: BORDER, left: THICK, right: THICK },
+        margins: { top: 80, bottom: 80, left: 120, right: 120 },
+        children,
+      })],
+    })
+
+    return new Document({
+      sections: [{
+        properties: { page: { margin: margins } },
+        children: [
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              // Título
+              row([para([run('PREAVISO LABORAL', { bold: true, size: 28, color: COLOR.dark })], { align: AlignmentType.CENTER, spaceAfter: 0 })]),
+              // Fila vacía
+              row([para([run('')], { spaceAfter: 0 })]),
+              // Empresa
+              row([
+                para([run(d.empresa || '', { bold: true, size: 22 })], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+                para([run('___________________________', { color: COLOR.gray, size: 20 })], { align: AlignmentType.CENTER, spaceAfter: 0 }),
+              ]),
+              // Presente
+              row([para([run('Presente.', { bold: true })], { spaceAfter: 0 })]),
+              // Texto legal
+              row([para([
+                run('Por este medio interpongo mi preaviso de la Renuncia Voluntaria para dar cumplimiento al '),
+                run('Art.2 de la ley Reguladora de Prestación Económica por Renuncia Voluntaria', { bold: true }),
+                run(', según Decreto '),
+                run('Legislativo 592', { bold: true }),
+                run(', la cual surtirá efecto a partir del día:'),
+              ], { align: AlignmentType.JUSTIFIED, spaceAfter: 0 })]),
+              // Fecha último día
+              row([
+                para([run(fmtDate(d.fecha_ultimo_dia), { size: 22 })], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+                para([run('___________________________', { color: COLOR.gray })], { align: AlignmentType.CENTER, spaceAfter: 0 }),
+              ]),
+              // Agradecimiento
+              row([para([run('Agradezco la oportunidad que se me otorgó por prestar mis servicios a dicha empresa desde:', { bold: true })], { spaceAfter: 0 })]),
+              // Fecha ingreso
+              row([
+                para([run(fmtDate(d.fecha_ingreso))], { spaceAfter: 40 }),
+                para([run('___________________________', { color: COLOR.gray })], { spaceAfter: 0 }),
+              ]),
+              // Ciudad y fecha presentación
+              row([para([
+                run('San Salvador, ', { bold: true }),
+                run(fmtDate(d.fecha_presentacion)),
+              ], { spaceAfter: 0 })]),
+              // Nombre trabajador
+              row([
+                para([run(d.empleado || '', { bold: true })], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+                para([run('___________________________', { color: COLOR.gray })], { align: AlignmentType.CENTER, spaceAfter: 0 }),
+              ]),
+              // DUI
+              row([
+                para([run(d.dui || '')], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+                para([run('___________________________', { color: COLOR.gray })], { align: AlignmentType.CENTER, spaceAfter: 0 }),
+              ]),
+              // Firma trabajador
+              row([
+                para([run('F.', { bold: true })], { spaceAfter: 300 }),
+                para([run('___________________________', { color: COLOR.gray })], { spaceAfter: 0 }),
+              ]),
+              // Header firma empleador
+              row([
+                para([run('FIRMA DE RECIBIDO DEL EMPLEADOR DIA Y HORA', { bold: true, size: 18 })], { spaceAfter: 40 }),
+                para([run('DE LA PRESENTACION. ART.4 DECRETO LEG. 592', { bold: true, size: 18 })], { spaceAfter: 0 }),
+              ]),
+              // Firma empleador
+              row([
+                para([run('F.', { bold: true })], { spaceAfter: 300 }),
+                para([run('___________________________', { color: COLOR.gray })], { spaceAfter: 0 }),
+              ]),
+            ],
+          }),
+        ],
+      }],
+    })
+  },
+
+  // 5. CARTA DE RECOMENDACIÓN
   'carta-recomendacion': (d) => new Document({
     sections: [{
-      properties: { page: { margin: { top: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1.25), right: convertInchesToTwip(1.25) } } },
+      properties: { page: { margin: margins } },
       children: [
-        heading('CARTA DE RECOMENDACIÓN'),
-        dividerLine(),
-        para([run(formatDate(d.fecha_emision), { size: 22, color: COLOR.gray })], { align: AlignmentType.RIGHT, spaceAfter: 300 }),
-        para([run('A quien corresponda:', { size: 22 })], { spaceAfter: 200 }),
+        // Header tabla 2 columnas
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE }, insideH: { style: BorderStyle.NONE }, insideV: { style: BorderStyle.NONE } },
+          rows: [new TableRow({ children: [
+            new TableCell({
+              width: { size: 55, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [
+                para([run(d.recomendante || '', { bold: true, size: 24 })], { spaceAfter: 40 }),
+                d.direccion_rec ? para([run(d.direccion_rec, { size: 18, color: COLOR.gray })], { spaceAfter: 20 }) : empty(0),
+                d.telefono_rec  ? para([run(d.telefono_rec,  { size: 18, color: COLOR.gray })], { spaceAfter: 20 }) : empty(0),
+                d.correo_rec    ? para([run(d.correo_rec,    { size: 18, color: COLOR.gray })], { spaceAfter: 20 }) : empty(0),
+              ],
+            }),
+            new TableCell({
+              width: { size: 45, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [
+                d.empresa           ? para([run(d.empresa,           { bold: true, size: 18 })], { align: AlignmentType.RIGHT, spaceAfter: 20 }) : empty(0),
+                d.direccion_empresa ? para([run(d.direccion_empresa, { size: 18, color: COLOR.gray })], { align: AlignmentType.RIGHT, spaceAfter: 0 }) : empty(0),
+              ],
+            }),
+          ]})],
+        }),
+        empty(200),
+        para([run(`En ${d.ciudad || '_______________'}, el ${fmtDate(d.fecha_emision)}`, { size: 20 })], { spaceAfter: 200 }),
+        para([run('Asunto: Recomendación Laboral para '), run(d.recomendado || '_______________', { bold: true })], { spaceAfter: 200 }),
+        para([run('Estimado/a '), run(d.destinatario || 'a quien corresponda', { bold: true }), run(':')], { spaceAfter: 200 }),
         para([
-          run('Por medio de la presente, yo, ', { size: 22 }),
-          run(d.recomendante, { size: 22, bold: true }),
-          run(`, ${d.cargo_rec} de `, { size: 22 }),
-          run(d.empresa, { size: 22, bold: true }),
-          run(', tengo el agrado de recomendar a ', { size: 22 }),
-          run(d.recomendado, { size: 22, bold: true }),
-          run(`, quien se desempeñó como `, { size: 22 }),
-          run(d.cargo_recomend, { size: 22, bold: true }),
-          run(` durante ${d.tiempo_trabajo}.`, { size: 22 }),
-        ], { spaceAfter: 200 }),
-        sectionTitle('Cualidades destacadas'),
-        para([run(d.cualidades, { size: 22 })], { spaceAfter: 200 }),
-        d.logros ? sectionTitle('Logros y contribuciones') : emptyLine(),
-        d.logros ? para([run(d.logros, { size: 22 })], { spaceAfter: 200 }) : emptyLine(),
-        para([run('Por lo expuesto, recomiendo ampliamente a ', { size: 22 }),
-          run(d.recomendado, { size: 22, bold: true }),
-          run(' para cualquier posición o responsabilidad que le sea encomendada.', { size: 22 }),
-        ], { spaceAfter: 400 }),
-        ...signatureBlock(d.recomendante, d.cargo_rec),
-        d.contacto ? para([run(`Contacto: ${d.contacto}`, { size: 20, color: COLOR.gray })]) : emptyLine(),
+          run('Me dirijo a usted para recomendar encarecidamente a '),
+          run(d.recomendado || '_______________', { bold: true }),
+          run(' para el puesto de '),
+          run(d.cargo_destino || '_______________', { bold: true }),
+          run('. Durante los '),
+          run(d.tiempo_trabajo || '___'),
+          run(' que '),
+          run(d.recomendado || '_______________', { bold: true }),
+          run(' trabajó con nosotros, demostró ser un profesional excepcionalmente talentoso y dedicado, destacándose en todas sus responsabilidades y superando consistentemente nuestras expectativas.'),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }),
+        d.cualidades ? para([run(d.cualidades)], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }) : empty(0),
+        d.logros
+          ? para([run(d.logros)], { align: AlignmentType.JUSTIFIED, spaceAfter: 360 })
+          : para([
+              run('No dudo en recomendar a '),
+              run(d.recomendado || '_______________', { bold: true }),
+              run(' y estoy seguro/a de que superará las expectativas. Si requiere más información no dude en contactarme.'),
+            ], { align: AlignmentType.JUSTIFIED, spaceAfter: 360 }),
+        para([run('Atentamente,')], { spaceAfter: 360 }),
+        ...sig(d.recomendante || '', d.cargo_actual || ''),
+        d.correo_rec   ? para([run(d.correo_rec,   { size: 18, color: COLOR.gray })], { spaceAfter: 20 }) : empty(0),
+        d.telefono_rec ? para([run(d.telefono_rec, { size: 18, color: COLOR.gray })]) : empty(0),
       ],
     }],
   }),
 
-  // Para los demás tipos, usamos un builder genérico de fallback
+  // 6. CONSTANCIA DE ESTUDIOS
+  'constancia-estudios': (d) => new Document({
+    sections: [{
+      properties: { page: { margin: margins } },
+      children: [
+        para([run(d.institucion || '', { bold: true, size: 24 })], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+        new Paragraph({
+          border: { bottom: { color: COLOR.dark, style: BorderStyle.SINGLE, size: 8, space: 4 } },
+          spacing: { after: 280 },
+        }),
+        para([run(`A ${fmtDate(d.fecha_emision)}${d.ciudad ? `; ${d.ciudad}` : ''}.`, { size: 20 })], { align: AlignmentType.RIGHT, spaceAfter: 240 }),
+        para([run('Asunto: ', { bold: true }), run('CONSTANCIA DE ESTUDIOS', { bold: true })], { spaceAfter: 200 }),
+        para([run(d.institucion || '', { bold: true }), run(', hace')], { align: AlignmentType.JUSTIFIED, spaceAfter: 80 }),
+        empty(160),
+        para([run('C O N S T A R', { bold: true, size: 26 })], { align: AlignmentType.CENTER, spaceAfter: 200 }),
+        empty(80),
+        para([
+          run('que el/la estudiante '),
+          run(d.estudiante || '_______________', { bold: true }),
+          d.carnet ? run(`, con número de carnet ${d.carnet},`) : run(','),
+          run(' forma parte del alumnado de esta institución, cursando '),
+          run(d.carrera || '_______________', { bold: true }),
+          run(', '),
+          run(d.ciclo || '_______________', { bold: true }),
+          run('.'),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }),
+        para([
+          run('Se extiende la presente constancia para '),
+          run(d.proposito || '_______________', { bold: true }),
+          run(', para el uso y fines que al interesado convenga en la fecha señalada y autorizada por esta institución.'),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 500 }),
+        para([run('___________________________', { color: COLOR.gray })], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+        para([run(d.representante || '', { bold: true })], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+        d.cargo_rep ? para([run(d.cargo_rep)], { align: AlignmentType.CENTER, spaceAfter: 40 }) : empty(0),
+        empty(300),
+        d.ccp ? para([run(`c.c.p. ${d.ccp}`, { size: 18, color: COLOR.gray })]) : empty(0),
+      ],
+    }],
+  }),
+
+  // 7. SOLICITUD DE BECA
+  'solicitud-beca': (d) => new Document({
+    sections: [{
+      properties: { page: { margin: margins } },
+      children: [
+        para([run(`${d.ciudad || 'San Salvador'}, a ${fmtDate(d.fecha_emision)}`, { size: 20 })], { align: AlignmentType.RIGHT, spaceAfter: 360 }),
+        para([run(d.destinatario    || '', { bold: true })], { spaceAfter: 40 }),
+        para([run(d.cargo_dest      || '')], { spaceAfter: 40 }),
+        para([run(d.institucion_dest|| '')], { spaceAfter: 40 }),
+        para([run('Presente')], { spaceAfter: 280 }),
+        para([
+          run('Por medio de la presente, yo, '),
+          run(d.solicitante || '_______________', { bold: true }),
+          d.carnet ? run(`, inscrito/a con número de cuenta ${d.carnet},`) : run(','),
+          run(' inscrito/a en '),
+          run(d.carrera || '_______________', { bold: true }),
+          run(' en '),
+          run(d.universidad || '_______________', { bold: true }),
+          run(', me dirijo a usted para solicitarle de la manera más atenta sea considerado/a para obtener '),
+          run(d.tipo_beca || 'la beca', { bold: true }),
+          run(' otorgada por esta Universidad.'),
+        ], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }),
+        d.motivo ? para([run(d.motivo)], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }) : empty(0),
+        d.logros  ? para([run(d.logros)], { align: AlignmentType.JUSTIFIED, spaceAfter: 160 }) : empty(0),
+        para([run('Sin más por el momento, le agradezco de antemano y quedo a sus órdenes.')], { align: AlignmentType.JUSTIFIED, spaceAfter: 360 }),
+        para([run('ATENTAMENTE', { bold: true })], { align: AlignmentType.CENTER, spaceAfter: 500 }),
+        para([run('___________________________', { color: COLOR.gray })], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+        para([run(d.solicitante || '', { bold: true })], { align: AlignmentType.CENTER, spaceAfter: 40 }),
+        d.correo   ? para([run(d.correo,   { size: 20, color: COLOR.gray })], { align: AlignmentType.CENTER, spaceAfter: 20 }) : empty(0),
+        d.telefono ? para([run(d.telefono, { size: 20, color: COLOR.gray })], { align: AlignmentType.CENTER }) : empty(0),
+      ],
+    }],
+  }),
 }
-
-// ── Builder genérico para documentos sin builder específico ──────────
-const GENERIC_FALLBACK = (label) => (d) => new Document({
-  sections: [{
-    properties: { page: { margin: { top: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1.25), right: convertInchesToTwip(1.25) } } },
-    children: [
-      heading(label.toUpperCase()),
-      dividerLine(),
-      emptyLine(),
-      ...Object.entries(d)
-        .filter(([, v]) => v)
-        .map(([k, v]) => labelValue(
-          k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-          v
-        )),
-      emptyLine(),
-      emptyLine(),
-      para([run('___________________________', { size: 22, color: COLOR.gray })]),
-      para([run('Firma', { size: 20, color: COLOR.gray })]),
-    ],
-  }],
-})
-
-// Registrar fallbacks para tipos sin builder específico
-import { DOCUMENT_TYPES } from '../data/documentTypes.js'
-DOCUMENT_TYPES.forEach((dt) => {
-  if (!BUILDERS[dt.id]) {
-    BUILDERS[dt.id] = GENERIC_FALLBACK(dt.label)
-  }
-})

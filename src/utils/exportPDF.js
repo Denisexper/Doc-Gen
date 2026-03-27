@@ -1,9 +1,3 @@
-/**
- * exportPDF.js
- * Exporta el contenido del #document-preview a un archivo PDF.
- * Usa html2pdf.js que internamente combina html2canvas + jsPDF.
- */
-
 export async function exportToPDF(filename = 'documento') {
   const element = document.getElementById('document-preview')
   if (!element) {
