@@ -1,0 +1,19 @@
+{
+  "name": "Doc-Gen | Generador de Documentos Profesionales",
+  "short_name": "Doc-Gen",
+  "description": "Genera documentos profesionales, contratos y formatos PDF en segundos. Sin registro, sin costo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "lang": "es",
+  "categories": ["productivity", "business", "utilities"],
+  "icons": [
+    {
+      "src": "/src/assets/archivos.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -2,50 +2,161 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="./src/assets/archivos.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- Color de marca para navegadores móviles -->
-    <meta name="theme-color" content="#4f46e5" /> 
 
-    <!-- SEO Avanzado -->
-    <title>Doc-Gen | Crea Documentos, PDF y Contratos Online Gratis</title>
-    <meta name="description" content="Genera documentos profesionales, contratos y formatos PDF en segundos. La herramienta más rápida y fácil para crear documentación personalizada online. ¡Pruébalo gratis!" />
-    <meta name="keywords" content="generador de documentos, crear pdf online, plantillas de contratos, formatos profesionales, doc-gen" />
-    <meta name="robots" content="index, follow" />
-    <meta name="author" content="Doc-Gen Team" />
+    <!-- Favicon y PWA -->
+    <link rel="icon" type="image/png" href="./src/assets/archivos.png" />
+    <link rel="apple-touch-icon" href="./src/assets/archivos.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Doc-Gen" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- SEO Principal -->
+    <title>Doc-Gen | Generador de Documentos y PDF Gratis Online</title>
+    <meta name="description" content="Crea constancias de trabajo, cartas de recomendación, permisos laborales, solicitudes de vacaciones y más en segundos. Descarga en PDF o Word. Gratis, sin registro." />
+    <meta name="keywords" content="generador de documentos gratis, constancia de trabajo, carta de recomendacion laboral, permiso laboral, solicitud de vacaciones, preaviso laboral, constancia de estudios, solicitud de beca, crear pdf online, plantillas documentos profesionales, formatos laborales pdf, doc-gen" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="author" content="Doc-Gen" />
     <link rel="canonical" href="https://doc-gen.lat/" />
 
-    <!-- Open Graph (Optimizado para impacto visual) -->
+    <!-- Targeting de idioma y región -->
+    <link rel="alternate" hreflang="es" href="https://doc-gen.lat/" />
+    <link rel="alternate" hreflang="x-default" href="https://doc-gen.lat/" />
+    <meta name="geo.region" content="SV" />
+    <meta name="geo.placename" content="El Salvador" />
+
+    <!-- Google Search Console — reemplaza el content con tu código de verificación -->
+    <!-- <meta name="google-site-verification" content="TU_CODIGO_AQUI" /> -->
+
+    <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://doc-gen.lat/" />
     <meta property="og:title" content="Doc-Gen | Generador de Documentos Profesionales Online" />
-    <meta property="og:description" content="¿Necesitas un documento rápido? Crea, edita y descarga formatos profesionales en segundos con Doc-Gen." />
-    <!-- Asegúrate de que esta imagen exista realmente en esa ruta -->
+    <meta property="og:description" content="Crea constancias, cartas de recomendación, permisos y más. Descarga en PDF o Word al instante. Gratis, sin registro." />
     <meta property="og:image" content="https://doc-gen.lat/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Doc-Gen - Generador de documentos profesionales gratis" />
     <meta property="og:locale" content="es_ES" />
     <meta property="og:site_name" content="Doc-Gen" />
 
-    <!-- Twitter/X -->
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@DocGenLat" /> <!-- Si tienes cuenta de X -->
-    <meta name="twitter:title" content="Doc-Gen | Documentación Profesional al Instante" />
-    <meta name="twitter:description" content="Genera tus documentos y contratos PDF de forma fácil y gratuita." />
+    <meta name="twitter:site" content="@DocGenLat" />
+    <meta name="twitter:title" content="Doc-Gen | Documentos Profesionales al Instante" />
+    <meta name="twitter:description" content="Genera constancias, cartas y formatos PDF de forma fácil y gratuita. Sin registro." />
     <meta name="twitter:image" content="https://doc-gen.lat/og-image.png" />
+    <meta name="twitter:image:alt" content="Doc-Gen - Generador de documentos profesionales gratis" />
 
     <!-- Rendimiento de Fuentes -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    
-    <!-- PWA / Web App Capabilities -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Google Analytics 4 -->
+    <!-- PASO 1: Ve a analytics.google.com y crea una propiedad para doc-gen.lat -->
+    <!-- PASO 2: Reemplaza AMBOS "G-XXXXXXXXXX" con tu Measurement ID real -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
+
+    <!-- JSON-LD: Datos estructurados para Google (rich results) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://doc-gen.lat/#app",
+          "name": "Doc-Gen",
+          "url": "https://doc-gen.lat/",
+          "description": "Genera documentos profesionales, contratos y formatos PDF en segundos. Sin registro, sin costo.",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web Browser",
+          "inLanguage": "es",
+          "isAccessibleForFree": true,
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "Constancia de Trabajo",
+            "Permiso Laboral",
+            "Solicitud de Vacaciones",
+            "Preaviso Laboral (Carta de Renuncia)",
+            "Carta de Recomendación",
+            "Constancia de Estudios",
+            "Solicitud de Beca"
+          ],
+          "screenshot": "https://doc-gen.lat/og-image.png"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://doc-gen.lat/#website",
+          "url": "https://doc-gen.lat/",
+          "name": "Doc-Gen",
+          "description": "Generador de documentos profesionales online gratis",
+          "inLanguage": "es",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://doc-gen.lat/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "¿Es gratis Doc-Gen?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sí, Doc-Gen es completamente gratis. No necesitas registrarte ni pagar para generar y descargar tus documentos en PDF o Word."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "¿Qué documentos puedo crear en Doc-Gen?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Puedes crear constancias de trabajo, permisos laborales, solicitudes de vacaciones, preavisos de renuncia, cartas de recomendación, constancias de estudios y solicitudes de beca."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "¿Necesito crear una cuenta para usar Doc-Gen?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. Doc-Gen no requiere registro ni cuenta. Solo rellena el formulario y descarga tu documento al instante."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "¿En qué formato puedo descargar los documentos?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Puedes descargar tus documentos en formato PDF o Word (.docx), listos para imprimir o compartir."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
-    <!-- Accesibilidad: Un h1 oculto ayuda a los lectores de pantalla y a Google a entender el propósito si tu root está vacío al inicio -->
-    <h1 style="display:none;">Doc-Gen: Herramienta Online para Generar Documentos Profesionales</h1>
-    
+    <h1 style="display:none;">Doc-Gen: Generador Online de Documentos Profesionales Gratis</h1>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
