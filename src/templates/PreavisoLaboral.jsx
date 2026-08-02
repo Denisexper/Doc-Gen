@@ -1,3 +1,5 @@
+import { fmtDate, blank, paper } from "../utils/templateHelpers";
+
 export function PreavisoLaboral({ d }) {
   // Ajustamos el padding y eliminamos alturas fijas para evitar la hoja en blanco
   return (

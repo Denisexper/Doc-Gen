@@ -1,9 +1,9 @@
 import { fmtDate, blank, paper } from "../utils/templateHelpers";
 
 // ─────────────────────────────────────────────────────────────────────
-// 1. CONSTANCIA DE TRABAJO — basada en imagen 1
+// CONSTANCIA DE INGRESOS
 // ─────────────────────────────────────────────────────────────────────
-export function ConstanciaTrabajo({ d }) {
+export function ConstanciaIngresos({ d }) {
   return (
     <div id="document-preview" className={`${paper} p-10`}>
       {/* Header: empresa + fecha */}
@@ -16,6 +16,9 @@ export function ConstanciaTrabajo({ d }) {
             <p className="text-xs text-gray-500 mt-0.5">
               {d.direccion_empresa}
             </p>
+          )}
+          {d.telefono_empresa && (
+            <p className="text-xs text-gray-500">{d.telefono_empresa}</p>
           )}
         </div>
         <p className="text-sm text-right whitespace-nowrap">
@@ -32,7 +35,7 @@ export function ConstanciaTrabajo({ d }) {
 
       {/* Cuerpo */}
       <p className="mb-5 text-justify">
-        Por medio de la presente hacemos constar que la Ciudadana/o{" "}
+        Por medio de la presente hacemos constar que el/la Ciudadano/a{" "}
         <strong>{blank(d.empleado)}</strong>
         {d.dui_empleado ? (
           <>
@@ -42,27 +45,32 @@ export function ConstanciaTrabajo({ d }) {
         ) : (
           ","
         )}{" "}
-        ha estado prestando sus servicios profesionales desde la fecha{" "}
-        <strong>{fmtDate(d.fecha_ingreso)}</strong> a la fecha, desempeñando el
-        cargo de <strong>{blank(d.cargo_empleado)}</strong>
-        {d.salario ? (
+        labora en esta institución desde el{" "}
+        <strong>{fmtDate(d.fecha_ingreso)}</strong>, desempeñando el cargo de{" "}
+        <strong>{blank(d.cargo_empleado)}</strong>, devengando un ingreso
+        mensual {d.tipo_ingreso ? `de tipo ${d.tipo_ingreso.toLowerCase()}` : ""}{" "}
+        de <strong>USD {parseFloat(d.ingreso_mensual || 0).toFixed(2)}</strong>
+        {d.ingreso_letras ? (
           <>
-            , devengando un sueldo de{" "}
-            <strong>USD {parseFloat(d.salario || 0).toFixed(2)}</strong>
+            {" "}
+            ({d.ingreso_letras})
           </>
         ) : null}
         .
       </p>
 
-      <p className="mb-10 text-justify">
-        Durante el tiempo que ha colaborado con nuestra institucion, ha
-        demostrado responsabilidad, compromiso, profesionalismo y eficiencia en
-        el cumplimiento de sus labores.
-      </p>
+      {d.antiguedad && (
+        <p className="mb-5 text-justify">
+          A la fecha de emisión de esta constancia, el/la empleado/a cuenta
+          con una antigüedad de <strong>{d.antiguedad}</strong> dentro de la
+          institución.
+        </p>
+      )}
 
       <p className="mb-10 text-justify">
-        Agradeciendo de antemano las atenciones que se sirva dar al presente,
-        quedo como su más seguro servidor.
+        Se extiende la presente constancia a solicitud del interesado/a para{" "}
+        {blank(d.proposito, "los fines que estime convenientes")}, a los{" "}
+        {fmtDate(d.fecha_emision)}.
       </p>
 
       {/* Cierre */}

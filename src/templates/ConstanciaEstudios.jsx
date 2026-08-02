@@ -1,3 +1,5 @@
+import { fmtDate, blank, paper } from "../utils/templateHelpers";
+
 export function ConstanciaEstudios({ d }) {
   return (
     <div id="document-preview" className={`${paper} p-10`}>

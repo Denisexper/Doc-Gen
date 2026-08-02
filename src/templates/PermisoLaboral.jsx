@@ -1,3 +1,5 @@
+import { fmtDate, blank, calcDias, paper } from "../utils/templateHelpers";
+
 export function PermisoLaboral({ d }) {
   const dias = calcDias(d.fecha_inicio, d.fecha_fin);
 
