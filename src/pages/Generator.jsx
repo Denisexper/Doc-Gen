@@ -1,23 +1,52 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Download, FileText, Printer } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Printer, Trash2 } from 'lucide-react'
 import { getDocumentType } from '../data/documentTypes'
 import DynamicForm from '../components/DynamicForm'
 import DocumentPreview from '../components/DocumentPreview'
 import { exportToPDF } from '../utils/exportPDF'
 import { exportToWord } from '../utils/exportWord'
+import { validateFields } from '../utils/validation'
+import { loadDraft, saveDraft, clearDraft } from '../utils/draftStorage'
 
 export default function Generator() {
   const { tipo } = useParams()
   const docType = getDocumentType(tipo)
 
-  const [formData, setFormData] = useState({})
+  const [formData, setFormData] = useState(() => loadDraft(tipo) || {})
+  const [errors, setErrors] = useState({})
   const [loadingPDF, setLoadingPDF] = useState(false)
   const [loadingWord, setLoadingWord] = useState(false)
 
+  // Recarga el borrador si el usuario navega a otro tipo de documento
+  // sin desmontar el componente (misma ruta, distinto :tipo).
+  useEffect(() => {
+    setFormData(loadDraft(tipo) || {})
+    setErrors({})
+  }, [tipo])
+
+  // Guarda el borrador en localStorage cada vez que cambian los datos.
+  useEffect(() => {
+    const timer = setTimeout(() => saveDraft(tipo, formData), 300)
+    return () => clearTimeout(timer)
+  }, [tipo, formData])
+
   const handleChange = useCallback((id, value) => {
     setFormData((prev) => ({ ...prev, [id]: value }))
+    setErrors((prev) => {
+      if (!prev[id]) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
   }, [])
+
+  const handleClear = () => {
+    if (!window.confirm('¿Borrar todos los datos ingresados en este formulario?')) return
+    setFormData({})
+    setErrors({})
+    clearDraft(tipo)
+  }
 
   if (!docType) {
     return (
@@ -30,13 +59,26 @@ export default function Generator() {
 
   const filenameBase = `${docType.label.toLowerCase().replace(/\s+/g, '-')}`
 
+  const runValidation = () => {
+    const fieldErrors = validateFields(docType.fields, formData)
+    setErrors(fieldErrors)
+    const firstInvalidId = Object.keys(fieldErrors)[0]
+    if (firstInvalidId) {
+      document.getElementById(firstInvalidId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      document.getElementById(firstInvalidId)?.focus()
+    }
+    return Object.keys(fieldErrors).length === 0
+  }
+
   const handlePDF = async () => {
+    if (!runValidation()) return
     setLoadingPDF(true)
     try { await exportToPDF(filenameBase) }
     finally { setLoadingPDF(false) }
   }
 
   const handleWord = async () => {
+    if (!runValidation()) return
     setLoadingWord(true)
     try { await exportToWord(tipo, formData, filenameBase) }
     catch (e) { console.error(e); alert('Error al generar el Word: ' + e.message) }
@@ -68,14 +110,29 @@ export default function Generator() {
         <div>
           <div className="sticky top-24">
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <h2 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wider">
-                Datos del documento
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  Datos del documento
+                </h2>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                  title="Borrar todos los datos"
+                >
+                  <Trash2 size={13} />
+                  Limpiar
+                </button>
+              </div>
               <DynamicForm
                 fields={docType.fields}
                 values={formData}
                 onChange={handleChange}
+                errors={errors}
               />
+              <p className="text-xs text-gray-400 mt-4">
+                Tu progreso se guarda automáticamente en este navegador.
+              </p>
             </div>
 
             {/* Botones de exportación */}
